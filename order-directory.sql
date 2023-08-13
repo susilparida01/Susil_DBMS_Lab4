@@ -166,5 +166,47 @@ select product.pro_name, `order`.* from `order`, supplier_pricing, product
 where `order`.cus_id=2 and 
 `order`.pricing_id=supplier_pricing.pricing_id and supplier_pricing.pro_id=product.pro_id;
 
+// Q6
+select s.* from supplier_pricing sp
+inner join supplier s ON s.SUPP_id = sp.SUPP_ID
+group by SUPP_ID HAVING COUNT(*) > 1;
 
+select s.*, count(pro_id) as product_count from supplier_pricing sp
+ inner join supplier s on s.supp_id = sp.supp_id
+ group by supp_id
+ having count(pro_id) > 1;
+
+select supplier.* from supplier where supplier.supp_id in 
+	(select supp_id from supplier_pricing group by supp_id having 
+	count(supp_id)>1) 
+group by supplier.supp_id;
+
+select s.*,A.* from
+(select sp.SUPP_ID, count(sp.PRO_ID) as no_of_products from supplier_pricing sp group by sp.SUPP_ID having count(sp.PRO_ID)>1 ) 
+as A inner join Supplier s on s.SUPP_ID=A.SUPP_ID;
+
+
+// Q7
+
+select p.pro_id, p.pro_name, p.pro_desc, c.cat_name, min(sp.supp_price) as minimum_product_price from product p
+ inner join supplier_pricing sp on p.pro_id = sp.pro_id
+ inner join category c on p.cat_id = c.cat_id
+ group by p.cat_id;
+ 
+
+select min(SUPP_PRICE),c.CAT_ID from category c inner join product p on c.CAT_ID=p.CAT_ID inner join SUPPLIER_PRICING s on p.PRO_ID=s.PRO_ID group by c.CAT_ID;
+
+select k.cat_id, k.cat_name,  product.pro_id, product.pro_name, supplier_pricing.supp_price,
+k.minPrice from (select MIN(SUPP_PRICE) as minPrice, category.cat_name, category.cat_id from product 
+join supplier_pricing on supplier_pricing.pro_id = product.pro_id
+join category on category.cat_id = product.cat_id GROUP BY category.cat_id) k
+join product on k.cat_id = product.cat_id 
+join supplier_pricing on supplier_pricing.pro_id = product.pro_id 
+where k.minPrice = supplier_pricing.supp_price ORDER BY cat_id ASC;
+
+select category.cat_id,category.cat_name, min(t3.min_price) as Min_Price from category inner join
+(select product.cat_id, product.pro_name, t2.* from product inner join  
+(select pro_id, min(supp_price) as Min_Price from supplier_pricing group by pro_id) 
+as t2 where t2.pro_id = product.pro_id)
+as t3 where t3.cat_id = category.cat_id group by t3.cat_id;
 
