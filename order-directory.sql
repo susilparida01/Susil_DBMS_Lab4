@@ -144,17 +144,24 @@ INSERT INTO `RATING` VALUES(14,114,1);
 INSERT INTO `RATING` VALUES(15,115,1);
 INSERT INTO `RATING` VALUES(16,116,0);
 
-//Q4
-SELECT CUS_GENDER, COUNT(*) AS Total_Customers FROM customer
-WHERE CUS_ID IN (SELECT DISTINCT CUS_ID FROM `order`  WHERE ORD_AMOUNT >= 3000)
+//Q4 Display the total number of customers based on gender who have placed orders of worth at least Rs.3000
+SELECT CUS_GENDER, COUNT(*) AS Total_Customers
+FROM customer
+WHERE CUS_ID IN (
+    SELECT DISTINCT CUS_ID
+    FROM `order`
+    WHERE ORD_AMOUNT >= 3000
+)
 GROUP BY CUS_GENDER;
 
-select count(t2.cus_gender) as NoOfCustomers, t2.cus_gender from (select t1.cus_id, t1.cus_gender, t1.ord_amount, t1.cus_name from 
+
+select count(t2.cus_gender) as NoOfCustomers, t2.cus_gender from 
+(select t1.cus_id, t1.cus_gender, t1.ord_amount, t1.cus_name from 
 (select `order`.*, customer.cus_gender, customer.cus_name from `order` inner join customer where `order`.cus_id=customer.cus_id having `order`.ord_amount>=3000)
 as t1  group by t1.cus_id) as t2 group by t2.cus_gender;
 
 
-//Q5
+//Q5 Display all the orders along with product name ordered by a customer having Customer_Id=2
 select A.*, p.PRO_NAME from product p inner join 
 (select o.ORD_ID, o.ORD_AMOUNT,o.ORD_DATE, o.PRICING_ID, o.CUS_ID, sp.PRO_ID from `order` o inner join supplier_pricing sp 
 on o.PRICING_ID=sp.PRICING_ID where CUS_ID=2) as A
@@ -166,7 +173,7 @@ select product.pro_name, `order`.* from `order`, supplier_pricing, product
 where `order`.cus_id=2 and 
 `order`.pricing_id=supplier_pricing.pricing_id and supplier_pricing.pro_id=product.pro_id;
 
-// Q6
+-- Q6 Display the Supplier details who can supply more than one product
 select s.* from supplier_pricing sp
 inner join supplier s ON s.SUPP_id = sp.SUPP_ID
 group by SUPP_ID HAVING COUNT(*) > 1;
@@ -186,7 +193,7 @@ select s.*,A.* from
 as A inner join Supplier s on s.SUPP_ID=A.SUPP_ID;
 
 
-// Q7
+-- Q7 Find the least expensive product from each category and print the table with category id, name, product name and price of the product
 
 select p.pro_id, p.pro_name, p.pro_desc, c.cat_name, min(sp.supp_price) as minimum_product_price from product p
  inner join supplier_pricing sp on p.pro_id = sp.pro_id
@@ -210,3 +217,73 @@ select category.cat_id,category.cat_name, min(t3.min_price) as Min_Price from ca
 as t2 where t2.pro_id = product.pro_id)
 as t3 where t3.cat_id = category.cat_id group by t3.cat_id;
 
+-- SELECT
+--     c.cat_id,
+--     c.cat_name,
+--     t4.pro_name,
+--     t4.supp_price as minimum_price
+--     
+-- FROM
+--     category c
+-- JOIN (
+--     SELECT
+--         p.cat_id,
+--         p.pro_name,
+--         sp.supp_price,
+--         RANK() OVER (PARTITION BY p.cat_id ORDER BY sp.supp_price) AS price_rank
+--     FROM
+--         product p
+--     JOIN (
+--         SELECT
+--             pro_id,
+--             supp_price
+--         FROM
+--             supplier_pricing
+--         WHERE
+--             (pro_id, supp_price) IN (
+--                 SELECT
+--                     pro_id,
+--                     MIN(supp_price) AS Min_Price
+--                 FROM
+--                     supplier_pricing
+--                 GROUP BY
+--                     pro_id
+--             )
+--     ) sp ON p.pro_id = sp.pro_id
+-- ) as t4 ON c.cat_id = t4.cat_id AND t4.price_rank = 1;
+
+-- Q8 Display the Id and Name of the Product ordered after “2021-10-05”.
+
+select p.PRO_ID, p.PRO_NAME, o.ORD_DATE from `order` o 
+inner join supplier_pricing sp ON sp.PRICING_ID = o.PRICING_ID
+inner join product p ON sp.PRO_ID = p.PRO_ID
+where o.ORD_DATE > "2021-10-05";
+
+select product.pro_id,product.pro_name from `order` inner join supplier_pricing on supplier_pricing.pricing_id=`order`.pricing_id inner join product on product.pro_id=supplier_pricing.pro_id where `order`.ord_date>"2021-10-05";
+
+
+-- Q9 Display customer name and gender whose names start or end with character 'A'.
+
+select CUS_NAME, CUS_GENDER from customer where CUS_NAME LIKE "%A" OR CUS_NAME LIKE "A%";
+select customer.cus_name,customer.cus_gender from customer where customer.cus_name like 'A%' or customer.cus_name like '%A';
+
+-- Q10 Create a stored procedure to display supplier id, name, rating and Type_of_Service. For Type_of_Service, If rating =5, 
+--     print “Excellent Service”,If rating >4 print “Good Service”, If rating >2 print “Average Service” else print “Poor Service”.
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `rating_proc`()
+BEGIN
+select report.supp_id,report.supp_name,report.Average,
+CASE
+	WHEN report.Average =5 THEN 'Excellent Service'
+    	WHEN report.Average >4 THEN 'Good Service'
+    	WHEN report.Average >2 THEN 'Average Service'
+    	ELSE 'Poor Service'
+END AS Type_of_Service from 
+(select final.supp_id, supplier.supp_name, final.Average from
+(select test2.supp_id, sum(test2.rat_ratstars)/count(test2.rat_ratstars) as Average from
+(select supplier_pricing.supp_id, test.ORD_ID, test.RAT_RATSTARS from supplier_pricing inner join
+(select `order`.pricing_id, rating.ORD_ID, rating.RAT_RATSTARS from `order` inner join rating on rating.`ord_id` = `order`.ord_id ) as test
+on test.pricing_id = supplier_pricing.pricing_id) 
+as test2 group by test2.supp_id) 
+as final inner join supplier where final.supp_id = supplier.supp_id) as report;
+END
