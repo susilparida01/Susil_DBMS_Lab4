@@ -144,4 +144,27 @@ INSERT INTO `RATING` VALUES(14,114,1);
 INSERT INTO `RATING` VALUES(15,115,1);
 INSERT INTO `RATING` VALUES(16,116,0);
 
+//Q4
+SELECT CUS_GENDER, COUNT(*) AS Total_Customers FROM customer
+WHERE CUS_ID IN (SELECT DISTINCT CUS_ID FROM `order`  WHERE ORD_AMOUNT >= 3000)
+GROUP BY CUS_GENDER;
+
+select count(t2.cus_gender) as NoOfCustomers, t2.cus_gender from (select t1.cus_id, t1.cus_gender, t1.ord_amount, t1.cus_name from 
+(select `order`.*, customer.cus_gender, customer.cus_name from `order` inner join customer where `order`.cus_id=customer.cus_id having `order`.ord_amount>=3000)
+as t1  group by t1.cus_id) as t2 group by t2.cus_gender;
+
+
+//Q5
+select A.*, p.PRO_NAME from product p inner join 
+(select o.ORD_ID, o.ORD_AMOUNT,o.ORD_DATE, o.PRICING_ID, o.CUS_ID, sp.PRO_ID from `order` o inner join supplier_pricing sp 
+on o.PRICING_ID=sp.PRICING_ID where CUS_ID=2) as A
+ on p.PRO_ID=A.PRO_ID ;
+ 
+select o.*, pr.PRO_NAME from `order` o, supplier_pricing sp, product pr  where CUS_ID = 2 and o.PRICING_ID = sp.PRICING_ID and sp.PRO_ID = pr.PRO_ID;
+ 
+select product.pro_name, `order`.* from `order`, supplier_pricing, product 
+where `order`.cus_id=2 and 
+`order`.pricing_id=supplier_pricing.pricing_id and supplier_pricing.pro_id=product.pro_id;
+
+
 
